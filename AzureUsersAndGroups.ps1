@@ -122,7 +122,7 @@ Function StringsInList1NotInList2 {
   {
     if (-Not ($list2 -Contains $itemFromList1))
     {
-      $listOfGroupsToAdd.Add($itemFromList1)
+      $rtnList.Add($itemFromList1)
     }
   }
   return $rtnList
