@@ -1,23 +1,29 @@
 ﻿
+Function LogInToEverythingAzure {
+  <#
+    .SYNOPSIS
+    Logs users in to AzureAd and AzureRM - you will be prompted twice
+    .DESCRIPTION
+    Prompts users twice to log in to Azure using their organizational credentials
+    #>
 
-# Log in to Azure
-Connect-AzureRmAccount
-# Connect-AzureRmAccount -Environment AzureChinaCloud
+    # Log in to Azure
+    Connect-AzureRmAccount
 
-
-# Todo Switch to specific subscription
-
-# Todo Switch to correct tenant ID
-
-
-# Connect using the Azure AD module to get access to groups
-Connect-AzureAD
-
+    # Connect-AzureRmAccount -Environment AzureChinaCloud
 
 
-$SecureStringPassword = ConvertTo-SecureString -String "password1812**" -AsPlainText -Force
+    # Todo deal with China and Germany Logins
+    # Todo Switch to specific subscription
+    # Todo Switch to correct tenant ID
 
-$specificUser = New-AzureRmADUser -DisplayName "Robot Three" -UserPrincipalName "robotthree@unioncrate.com" -Password $SecureStringPassword -MailNickname "RobotThreeNickName"
+    # Connect using the Azure AD module to get access to groups
+    Connect-AzureAD
+  }
+
+
+#$SecureStringPassword = ConvertTo-SecureString -String "password1812**" -AsPlainText -Force
+#$specificUser = New-AzureRmADUser -DisplayName "Robot Three" -UserPrincipalName "robotthree@unioncrate.com" -Password $SecureStringPassword -MailNickname "RobotThreeNickName"
 $specificUserId = $specificUser.Id
 
 
