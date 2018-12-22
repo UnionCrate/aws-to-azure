@@ -116,7 +116,10 @@ Function CreateAzureGroupsByDisplayName {
     $someListLikeObject
     )
     $rtnList = New-Object System.Collections.Generic.List[string]
-    
+    ForEach($item in $someListLikeObject)
+    {
+      $rtnList.Add($item)
+    }
 
     return ,$rtnList
   }
