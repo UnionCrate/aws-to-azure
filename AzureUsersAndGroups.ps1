@@ -23,7 +23,6 @@ Function LogInToEverythingAzure {
 
 
 #$SecureStringPassword = ConvertTo-SecureString -String "password1812**" -AsPlainText -Force
-#$specificUser = New-AzureRmADUser -DisplayName "Robot Three" -UserPrincipalName "robotthree@unioncrate.com" -Password $SecureStringPassword -MailNickname "RobotThreeNickName"
 $specificUserId = $specificUser.Id
 
 
@@ -159,13 +158,14 @@ Function CreateAzureGroupsByDisplayName {
   
       $groupNamesFromCsv = New-Object System.Collections.Generic.List[string]
       $someHashset.CopyTo($groupNamesFromCsv)
-
       CreateAzureGroupsByDisplayName $groupNamesFromCsv
-      
-
-  
       $listOfGroupsToAdd = New-Object System.Collections.Generic.List[string]
-  
+      ForEach($indivualRow in $csvObj)
+      {
+        #Todo put this in a try/catch
+        $SecureStringPassword = ConvertTo-SecureString -String $indivualRow.Password -AsPlainText -Force
+        New-AzureRmADUser -DisplayName $indivualRow.DisplayName -UserPrincipalName. $indivualRow.UserPrincipalName -Password $SecureStringPassword -MailNickname $indivualRow.Displayname
+      }
   
       $groupObj = Get-AzureADGroup
       $groupNames = $groupObj.DisplayName   
