@@ -36,69 +36,6 @@ $oneGroupId = $oneGroup.ObjectId
 Add-AzureRmADGroupMember -MemberObjectId $specificUserId -TargetGroupObjectId $oneGroupId
 
 
-
-Function Add-BulkUsersFromCsv {
-  <#
-  .SYNOPSIS
-  Adds an existing Azure User to one group
-  .DESCRIPTION
-  Adds an existing Azure User to one group
-  #>
-#[cmdletbinding()]
-Param (
-[string]$fileLocation,
-[string]$groupName
-   )
-    $csvObj = Import-Csv -path fileLocation
-    # Todo check the CSV that it indeed has rows
-    # Todo check that the CSV inded has a DisplayName and a UserPrinicpalName for each row
-    # Todo check that the UserPrincipalName is indeed a valid email address
-
-    # Get the headers that have 'Group' in the name
-    $tempObjTable = $csvObj | Get-Member
-    $tempObjTable = $tempObjTable | Where-Object -Property MemberType -eq -Value "NoteProperty"
-    $headerNames = $tempObjTable.Name
-    $headerNamesWithGroups = $headerNames | Where-Object {$_ -like "*Group*"} #| Out-String -Stream
-
-
-    $someHashSet = New-Object 'System.Collections.Generic.HashSet[string]'
-    ForEach($columnName in $headerNamesWithGroups)
-    {
-      $tempGroupList = $csvObj.$groupName
-      $tempGroupList | Where-Object {-Not([string]::IsNullOrEmpty($_))}
-      ForEach($oneGroupNameFromCsv in $tempGroupList)
-      {
-        $someHashSet.Add($oneGroupNameFromCsv)
-      }
-    }
-
-    $groupNamesFromCsv = New-Object int[] $someHashset.Count
-    $someHashset.CopyTo($groupNamesFromCsv)
-
-    
-    # Get all existing group names from Azure
-    $allGroupsObj = Get-AzureADGroup
-    $groupNamesFromAzure = $allGroupsObj.DisplayName
-
-    $listOfGroupsToAdd = New-Object System.Collections.Generic.List[string]
-
-
-    $groupObj = Get-AzureADGroup
-    $groupNames = $groupObj.DisplayName   
-    $specificUser = Get-AzureADUser | Where-Object {$_.UserPrincipalName -eq $userPrincipalName}
-    $specificUserId = $specificUser.ObjectId
-
-
-
-    $oneGroupObj = $allGroupsObj | Where-Object -Property DisplayName -eq -Value "Developers"
-    $oneGroupId = $oneGroupObj.ObjectId
-
-    #Add user to the developer group
-    Add-AzureRmADGroupMember -MemberObjectId $specificUserId -TargetGroupObjectId $oneGroupId
-    #Write-Information $message
-}
-
-
 Function StringsInList1NotInList2 {
 <#
   .SYNOPSIS
@@ -160,7 +97,8 @@ Function CreateAzureGroupsByDisplayName {
   )
     $allGroupsObj = Get-AzureADGroup
     $groupNamesFromAzure = $allGroupsObj.DisplayName
-    $actualListOfGroupsToAdd = StringsInList1NotInList2 -list1 groupsToAddToAzure -list2 $groupNamesFromAzure
+    $actualListOfGroupsToAdd = StringsInList1NotInList2 -list1 $groupsToAddToAzure -list2 $groupNamesFromAzure
+    $nonCreatedList = New-Object System.Collections.Generic.List[string]
     ForEach($groupToAdd in $actualListOfGroupsToAdd)
     {
       try {
@@ -173,7 +111,74 @@ Function CreateAzureGroupsByDisplayName {
     return $nonCreatedList
   }
 
+  Function CopyToListOfStrings {
+  Param (
+    $someListLikeObject
+    )
+    $rtnList = New-Object System.Collections.Generic.List[string]
+    
 
+    return ,$rtnList
+  }
+
+  Function Add-BulkUsersFromCsv {
+    <#
+    .SYNOPSIS
+    Adds an existing Azure User to one group
+    .DESCRIPTION
+    Adds an existing Azure User to one group
+    #>
+  #[cmdletbinding()]
+  Param (
+  [string]$fileLocation,
+  [string]$groupName
+     )
+      $csvObj = Import-Csv -path fileLocation
+      # Todo check the CSV that it indeed has rows
+      # Todo check that the CSV inded has a DisplayName and a UserPrinicpalName for each row
+      # Todo check that the UserPrincipalName is indeed a valid email address
+  
+      # Get the headers that have 'Group' in the name
+      $tempObjTable = $csvObj | Get-Member
+      $tempObjTable = $tempObjTable | Where-Object -Property MemberType -eq -Value "NoteProperty"
+      $headerNames = $tempObjTable.Name
+      $headerNamesWithGroups = $headerNames | Where-Object {$_ -like "*Group*"} #| Out-String -Stream
+      $someHashSet = New-Object 'System.Collections.Generic.HashSet[string]'
+      ForEach($columnName in $headerNamesWithGroups)
+      {
+        $tempGroupList = $csvObj.$groupName
+        $tempGroupList | Where-Object {-Not([string]::IsNullOrEmpty($_))}
+        ForEach($oneGroupNameFromCsv in $tempGroupList)
+        {
+          $someHashSet.Add($oneGroupNameFromCsv)
+        }
+      }
+  
+      $groupNamesFromCsv = New-Object System.Collections.Generic.List[string]
+      $someHashset.CopyTo($groupNamesFromCsv)
+
+      CreateAzureGroupsByDisplayName $groupNamesFromCsv
+      
+
+  
+      $listOfGroupsToAdd = New-Object System.Collections.Generic.List[string]
+  
+  
+      $groupObj = Get-AzureADGroup
+      $groupNames = $groupObj.DisplayName   
+      $specificUser = Get-AzureADUser | Where-Object {$_.UserPrincipalName -eq $userPrincipalName}
+      $specificUserId = $specificUser.ObjectId
+  
+  
+  
+      $oneGroupObj = $allGroupsObj | Where-Object -Property DisplayName -eq -Value "Developers"
+      $oneGroupId = $oneGroupObj.ObjectId
+  
+      #Add user to the developer group
+      Add-AzureRmADGroupMember -MemberObjectId $specificUserId -TargetGroupObjectId $oneGroupId
+      #Write-Information $message
+  }
+  
 
 
 $userPrincipalName = "robotthree@unioncrate.com"
@@ -182,8 +187,10 @@ $specificUser = Get-AzureADUser | Where-Object {$_.UserPrincipalName -eq $userPr
 
 
 
-Import-Csv -path "C:\temp\AzureUsers.csv"
+Import-Csv -path "C:\Uc\aws-to-azure\AzureUsers.csv"
 
+
+$somePath = "C:\Uc\aws-to-azure\AzureUsers.csv"
 
 New-AzureADGroup -DisplayName "SomeTestGroup" -MailEnabled $false -SecurityEnabled $true -MailNickName "some mail nickname"
 
