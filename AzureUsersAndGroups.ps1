@@ -81,13 +81,7 @@ Param (
     $groupNamesFromAzure = $allGroupsObj.DisplayName
 
     $listOfGroupsToAdd = New-Object System.Collections.Generic.List[string]
-    ForEach($invidualCsvGroupName in $groupNamesFromCsv)
-    {
-      if (-Not ($groupNamesFromAzure -Contains $invidualCsvGroupName))
-      {
-        $listOfGroupsToAdd.Add($invidualCsvGroupName)
-      }
-    }
+
 
     $groupObj = Get-AzureADGroup
     $groupNames = $groupObj.DisplayName   
@@ -105,7 +99,6 @@ Param (
 }
 
 
-
 Function StringsInList1NotInList2 {
 <#
   .SYNOPSIS
@@ -120,12 +113,12 @@ Function StringsInList1NotInList2 {
   $rtnList = New-Object System.Collections.Generic.List[string]
   ForEach($itemFromList1 in $list1)
   {
-    if (-Not ($list2 -Contains $itemFromList1))
+    if (-Not ($list2.Contains($itemFromList1)))
     {
       $rtnList.Add($itemFromList1)
     }
   }
-  return $rtnList
+  return ,$rtnList
 }
 
 
@@ -154,6 +147,35 @@ Param (
 }
 
 
+Function CreateAzureGroupsByDisplayName {
+  <#
+    .SYNOPSIS
+    Once logged into an Azure subscription and directory create a number of groups if they don't exist yet
+    .DESCRIPTION
+    Once logged into an Azure subscription and directory check what groups already exist by name and create a number of groups that don't yet exist
+    Return the list of groups that were not able to be created
+    #>
+    Param (
+    [System.Collections.Generic.List[string]]$groupsToAddToAzure
+  )
+    $allGroupsObj = Get-AzureADGroup
+    $groupNamesFromAzure = $allGroupsObj.DisplayName
+    $actualListOfGroupsToAdd = StringsInList1NotInList2 -list1 groupsToAddToAzure -list2 $groupNamesFromAzure
+    ForEach($groupToAdd in $actualListOfGroupsToAdd)
+    {
+      try {
+        New-AzureADGroup -DisplayName $groupToAdd -MailEnabled $false -SecurityEnabled $true -MailNickName "NotSet"
+      }
+      catch {
+        $nonCreatedList.Add($groupToAdd)
+      }
+    }
+    return $nonCreatedList
+  }
+
+
+
+
 $userPrincipalName = "robotthree@unioncrate.com"
 $specificUser = Get-AzureADUser | Where-Object {$_.UserPrincipalName -eq $userPrincipalName}
 
@@ -161,3 +183,10 @@ $specificUser = Get-AzureADUser | Where-Object {$_.UserPrincipalName -eq $userPr
 
 
 Import-Csv -path "C:\temp\AzureUsers.csv"
+
+
+New-AzureADGroup -DisplayName "SomeTestGroup" -MailEnabled $false -SecurityEnabled $true -MailNickName "some mail nickname"
+
+
+
+New-AzureADGroup -DisplayName "My new group" -MailEnabled $false -SecurityEnabled $true -MailNickName "NotSet"
