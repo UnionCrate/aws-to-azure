@@ -1,4 +1,4 @@
-﻿
+
 Function LogInToEverythingAzure {
   <#
     .SYNOPSIS
@@ -119,11 +119,100 @@ Function CreateAzureGroupsByDisplayName {
     {
       $rtnList.Add($item)
     }
-
     return ,$rtnList
   }
 
-  Function Add-BulkUsersFromCsv {
+  Function CopyToLowercaseStringList {
+    Param (
+    $someListLikeObject
+    )
+        $rtnList = New-Object System.Collections.Generic.List[string]
+    ForEach($item in $someListLikeObject)
+    {
+      $rtnList.Add($item.ToLower())
+    }
+    return ,$rtnList
+  }
+
+
+  Function Get-UniqueGroupNamesFromCsv{
+   Param(
+   [string]$fileLocation
+   )
+    $csvObj = Import-Csv -path $fileLocation
+    # Todo check the CSV that it indeed has rows
+    # Todo check that the CSV inded has a DisplayName and a UserPrinicpalName for each row
+    # Todo check that the UserPrincipalName is indeed a valid email address
+  
+    # Get the headers that have 'Group' in the name
+    $tempObjTable = $csvObj | Get-Member
+    $tempObjTable = $tempObjTable | Where-Object -Property MemberType -eq -Value "NoteProperty"
+    $headerNames = $tempObjTable.Name
+    $headerNamesWithGroups = $headerNames | Where-Object {$_ -like "*Group*"} #| Out-String -Stream
+    $someHashSet = New-Object 'System.Collections.Generic.HashSet[string]'
+    ForEach($columnName in $headerNamesWithGroups)
+    {
+        #echo("column name is: " +$columnName)
+        $tempGroupList = $csvObj.$columnName
+        echo("temp group list is: " + $tempGroupList)
+        $tempGroupList = $tempGroupList 
+            ForEach($oneGroupNameFromCsv in $tempGroupList)
+            {
+                $someHashSet.Add($oneGroupNameFromCsv)
+            }
+    }
+    $groupNamesFromCsv = New-Object System.Collections.Generic.List[string] $someHashset
+    $groupNamesFromCsv = $groupNamesFromCsv | Where-Object {-Not([string]::IsNullOrEmpty($_))}
+    return $groupNamesFromCsv 
+  }
+
+
+  Function Add-UserByPrincipalName{
+    <#
+    .SYNOPSIS
+    Adds a user by prinicpal name only if that prinicpal name does not exist as a user
+    .DESCRIPTION
+    Once logged into an Azure subscription, this function a list of all users and only adds a user if the principal name doesn't exist on Azure
+    #>
+  Param (
+  [string]$userPrincipalName,
+  [string]$displayName,
+  [string]$password
+  )
+   #$userPrincipalNames = CopyToLowercaseStringList((Get-AzureADUser).UserPrincipalName)
+   #if (-Not($userPrincipalNames.Contains($userPrincipalName.ToLower())))
+   #{
+        $SecureStringPassword = ConvertTo-SecureString -String $password -AsPlainText -Force
+        $nickName = $displayName -replace '\s',''
+        $specificUser = New-AzureRmADUser -DisplayName $displayName -UserPrincipalName $userPrincipalName -Password $SecureStringPassword -MailNickname $
+   #}
+  }
+
+
+
+
+
+  Function Is-SuitableInitialPassword{
+      <#
+    .SYNOPSIS
+    Azure Rm module is only allows certain characters as an initial passowrd when creating a new user
+    .DESCRIPTION
+    Azure Rm module is only allows certain characters as an initial passowrd when creating a new user. For example uppercase letters are not allowed
+    #>
+  Param(
+  [string]$potentialPassword
+  )
+  $firstCharacterPattern = 
+  $responseBool = $potentialPassword -ceq $potentialPassword.ToLower()
+  return $responseBool
+  }
+
+
+
+
+
+
+  Function Add-UsersAndGroupsFromCsv {
     <#
     .SYNOPSIS
     Adds an existing Azure User to one group
@@ -135,30 +224,15 @@ Function CreateAzureGroupsByDisplayName {
   [string]$fileLocation,
   [string]$groupName
      )
-      $csvObj = Import-Csv -path fileLocation
-      # Todo check the CSV that it indeed has rows
-      # Todo check that the CSV inded has a DisplayName and a UserPrinicpalName for each row
-      # Todo check that the UserPrincipalName is indeed a valid email address
-  
-      # Get the headers that have 'Group' in the name
-      $tempObjTable = $csvObj | Get-Member
-      $tempObjTable = $tempObjTable | Where-Object -Property MemberType -eq -Value "NoteProperty"
-      $headerNames = $tempObjTable.Name
-      $headerNamesWithGroups = $headerNames | Where-Object {$_ -like "*Group*"} #| Out-String -Stream
-      $someHashSet = New-Object 'System.Collections.Generic.HashSet[string]'
-      ForEach($columnName in $headerNamesWithGroups)
-      {
-        $tempGroupList = $csvObj.$groupName
-        $tempGroupList | Where-Object {-Not([string]::IsNullOrEmpty($_))}
-        ForEach($oneGroupNameFromCsv in $tempGroupList)
-        {
-          $someHashSet.Add($oneGroupNameFromCsv)
-        }
-      }
-  
-      $groupNamesFromCsv = New-Object System.Collections.Generic.List[string]
-      $someHashset.CopyTo($groupNamesFromCsv)
+     $csvObj = Import-Csv -path $fileLocation
+     # Todo: Do Csv file check here and do check on group names and user names here
+      $groupNamesFromCsv = Get-UniqueGroupNamesFromCsv $fileLocation     
       CreateAzureGroupsByDisplayName $groupNamesFromCsv
+      ForEach($line in $csvObj)
+      {
+        $SecureStringPassword = ConvertTo-SecureString -String "password" -AsPlainText -Force
+      }
+
       $listOfGroupsToAdd = New-Object System.Collections.Generic.List[string]
       ForEach($indivualRow in $csvObj)
       {
@@ -190,7 +264,7 @@ $specificUser = Get-AzureADUser | Where-Object {$_.UserPrincipalName -eq $userPr
 
 
 
-Import-Csv -path "C:\Uc\aws-to-azure\AzureUsers.csv"
+$csvObj = Import-Csv -path "C:\Uc\aws-to-azure\AzureUsers.csv"
 
 
 $somePath = "C:\Uc\aws-to-azure\AzureUsers.csv"
