@@ -15,3 +15,6 @@ Install-Module -Name PowerShellGet -Force
 
 #Installation of Azure Active Directory Module
 Install-Module -Name AzureAD -Force
+
+#Installation of Azure RM Module
+Install-Module -Name AzureRM
